@@ -16,6 +16,17 @@ load_dotenv()
 st.set_page_config(page_title="PDF RAG Q&A", layout="wide")
 st.title("📄 PDF RAG Application")
 
+# --- Optimized: Cache Embeddings ---
+@st.cache_resource
+def get_embeddings():
+    return HuggingFaceEmbeddings(
+        model_name="sentence-transformers/all-MiniLM-L6-v2",
+        model_kwargs={"device": "cpu"}
+    )
+
+# Load shared embeddings once for the entire session
+embeddings = get_embeddings()
+
 # Sidebar for file upload
 st.sidebar.header("Upload PDF")
 uploaded_file = st.sidebar.file_uploader("Upload your document", type="pdf")
@@ -42,13 +53,11 @@ def process_pdf(file_path):
     text_splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=200)
     splits = text_splitter.split_documents(docs)
 
-    embeddings = HuggingFaceEmbeddings(model_name="sentence-transformers/all-MiniLM-L6-v2", model_kwargs={"device": "cpu"})
-
-    # Create new index for each upload
+    # Optimized: Use in-memory Chroma to save RAM and avoid disk I/O on deployment
     vectorstore = Chroma.from_documents(
         documents=splits,
-        embedding=embeddings,
-        persist_directory="./chroma_db_temp" # Use temporary dir for session
+        embedding=embeddings, # Reuse cached embeddings model
+        persist_directory=None
     )
     return vectorstore
 
