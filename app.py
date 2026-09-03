@@ -5,11 +5,12 @@ from dotenv import load_dotenv
 
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_community.document_loaders import PyPDFLoader
-from langchain_huggingface import HuggingFaceEmbeddings
-# Switched from Chroma to FAISS for lower memory footprint
+# Switch to FAISS for lower memory footprint
 from langchain_community.vectorstores import FAISS
 from langchain_mistralai import ChatMistralAI
 from langchain_core.prompts import ChatPromptTemplate
+# Switch to Inference API to offload embedding computation
+from langchain_community.embeddings import HuggingFaceInferenceAPIEmbeddings
 
 load_dotenv()
 
@@ -17,16 +18,20 @@ load_dotenv()
 st.set_page_config(page_title="PDF RAG Q&A", layout="wide")
 st.title("📄 PDF RAG Application")
 
-# --- Optimized: Reverted to local embeddings as Inference API failed ---
-# We will rely on caching to minimize memory impact.
+# --- Optimized: Use HuggingFace Inference API for Embeddings ---
+# This offloads computation to HF servers, avoiding local torch/sentence-transformers RAM usage.
 @st.cache_resource
 def get_embeddings():
-    return HuggingFaceEmbeddings(
-        model_name="sentence-transformers/all-MiniLM-L6-v2",
-        model_kwargs={"device": "cpu"}
+    api_key = os.environ.get("HF_TOKEN")
+    if not api_key:
+        st.error("HF_TOKEN not found in environment variables. Application will fail.")
+        st.stop()
+    return HuggingFaceInferenceAPIEmbeddings(
+        api_key=api_key,
+        model_name="sentence-transformers/all-MiniLM-L6-v2"
     )
 
-# Load shared embeddings once for the entire session
+# Load shared embeddings once
 embeddings = get_embeddings()
 
 # Sidebar for file upload
@@ -55,7 +60,7 @@ def process_pdf(file_path):
     text_splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=200)
     splits = text_splitter.split_documents(docs)
 
-    # Optimized: Use FAISS for faster, lower-memory in-memory vector storage
+    # Use FAISS for faster, lower-memory in-memory vector storage
     vectorstore = FAISS.from_documents(
         documents=splits,
         embedding=embeddings
@@ -94,7 +99,7 @@ if st.session_state.vectorstore:
             docs = retriever.invoke(prompt)
             context = "\n".join([doc.page_content for doc in docs])
 
-            # LLM Response
+            # LLM Response - NOTE: Mistral API is also cloud-based, so this part is fine!
             llm = ChatMistralAI(model_name="open-mistral-7b", temperature=0.1)
             chat_prompt = ChatPromptTemplate.from_messages([
                 ("system", "You are a helpful assistant. Use context to answer. If you don't know, say you don't know."),
