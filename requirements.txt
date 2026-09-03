@@ -4,6 +4,7 @@ langchain-huggingface
 langchain-chroma
 langchain-mistralai
 langchain-core
+langchain-text-splitters
 python-dotenv
 pypdf
 sentence-transformers
