@@ -1,13 +1,12 @@
 streamlit
 langchain
 langchain-huggingface
-langchain-chroma
+langchain-community
 langchain-mistralai
 langchain-core
 langchain-text-splitters
 python-dotenv
 pypdf
-sentence-transformers
+faiss-cpu
 httpx
 tenacity
-chromadb

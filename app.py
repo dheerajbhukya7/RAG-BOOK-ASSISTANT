@@ -6,9 +6,12 @@ from dotenv import load_dotenv
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_community.document_loaders import PyPDFLoader
 from langchain_huggingface import HuggingFaceEmbeddings
-from langchain_chroma import Chroma
+# Switched from Chroma to FAISS for lower memory footprint
+from langchain_community.vectorstores import FAISS
 from langchain_mistralai import ChatMistralAI
 from langchain_core.prompts import ChatPromptTemplate
+# Switch to Inference API to offload embedding computation
+from langchain_community.embeddings import HuggingFaceInferenceAPIEmbeddings
 
 load_dotenv()
 
@@ -16,12 +19,14 @@ load_dotenv()
 st.set_page_config(page_title="PDF RAG Q&A", layout="wide")
 st.title("📄 PDF RAG Application")
 
-# --- Optimized: Cache Embeddings ---
+# --- Optimized: Use HuggingFace Inference API for Embeddings ---
+# This offloads computation, saving massive amounts of local RAM
 @st.cache_resource
 def get_embeddings():
-    return HuggingFaceEmbeddings(
-        model_name="sentence-transformers/all-MiniLM-L6-v2",
-        model_kwargs={"device": "cpu"}
+    # Ensure you have HF_TOKEN in your environment variables/Render config
+    return HuggingFaceInferenceAPIEmbeddings(
+        api_key=os.environ.get("HF_TOKEN"),
+        model_name="sentence-transformers/all-MiniLM-L6-v2"
     )
 
 # Load shared embeddings once for the entire session
@@ -53,11 +58,10 @@ def process_pdf(file_path):
     text_splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=200)
     splits = text_splitter.split_documents(docs)
 
-    # Optimized: Use in-memory Chroma to save RAM and avoid disk I/O on deployment
-    vectorstore = Chroma.from_documents(
+    # Optimized: Use FAISS for faster, lower-memory in-memory vector storage
+    vectorstore = FAISS.from_documents(
         documents=splits,
-        embedding=embeddings, # Reuse cached embeddings model
-        persist_directory=None
+        embedding=embeddings
     )
     return vectorstore
 
@@ -89,6 +93,7 @@ if st.session_state.vectorstore:
 
         with st.chat_message("assistant"):
             # Retrieval
+            # FAISS uses different search kwargs, but mmr should work fine
             retriever = st.session_state.vectorstore.as_retriever(search_type="mmr", search_kwargs={"k": 3})
             docs = retriever.invoke(prompt)
             context = "\n".join([doc.page_content for doc in docs])
