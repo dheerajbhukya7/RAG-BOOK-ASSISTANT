@@ -1,0 +1,347 @@
+GEN AI NOTES FOR RAG PROJECT
+
+1. What is Generative AI?
+Generative AI (GenAI) refers to AI systems that can create new content such as text, code, images, audio, and structured responses.
+Large Language Models (LLMs) such as GPT learn patterns from large datasets and generate text based on the input prompt.
+
+2. What is RAG?
+RAG stands for Retrieval-Augmented Generation.
+It combines:
+- Retrieval: Find relevant information from an external knowledge base.
+- Augmentation: Add the retrieved information to the LLM prompt.
+- Generation: The LLM produces an answer using the provided context.
+
+Basic flow:
+User Question
+    -> Query Processing
+    -> Retrieve Relevant Documents/Chunks
+    -> Build Prompt with Context
+    -> LLM
+    -> Generated Answer
+
+3. Why use RAG?
+RAG is useful because an LLM's built-in knowledge may be:
+- Outdated
+- Incomplete
+- Not specific to private/company data
+- Prone to hallucination
+
+RAG allows an application to answer using a controlled, updatable knowledge source without retraining the LLM every time the data changes.
+
+4. RAG Architecture
+Typical components:
+- Data sources: PDFs, websites, Word files, databases, FAQs, etc.
+- Document loader: Reads source data.
+- Text splitter/chunker: Breaks documents into smaller pieces.
+- Embedding model: Converts text into numerical vectors.
+- Vector database: Stores and searches embeddings.
+- Retriever: Finds relevant chunks for a query.
+- Prompt template: Combines question + retrieved context.
+- LLM: Generates the final response.
+- Optional reranker: Improves the ordering of retrieved results.
+- Evaluation/monitoring: Measures retrieval and answer quality.
+
+5. Document Ingestion Pipeline
+Typical ingestion process:
+1. Load documents.
+2. Clean and normalize text.
+3. Split text into chunks.
+4. Generate embeddings for each chunk.
+5. Store chunks, embeddings, and metadata in a vector database.
+
+Important metadata can include:
+- source
+- document name
+- page number
+- section
+- timestamp
+- access permissions
+
+6. Chunking
+Chunking means splitting large documents into smaller pieces before embedding.
+
+Common strategies:
+- Fixed-size chunks
+- Recursive character splitting
+- Sentence-based chunks
+- Paragraph/section-based chunks
+- Semantic chunking
+
+Chunk size is a trade-off:
+- Too small: context may be incomplete.
+- Too large: retrieval becomes less precise and may waste context window.
+
+Overlap can be used so information at chunk boundaries is not lost.
+
+7. Embeddings
+An embedding is a numerical representation of text in a vector space.
+Texts with similar meanings tend to have vectors that are close to each other.
+
+Example:
+"How do I reset my password?"
+and
+"I forgot my password. What is the reset process?"
+should have similar embeddings.
+
+Embedding models are used for semantic search.
+
+8. Vector Database
+A vector database stores embeddings and supports similarity search.
+
+Examples:
+- FAISS
+- Chroma
+- Pinecone
+- Weaviate
+- Milvus
+- Qdrant
+- pgvector/PostgreSQL
+
+A stored record commonly contains:
+- vector embedding
+- original text/chunk
+- metadata
+
+9. Similarity Search
+When a user asks a question:
+1. Convert the question into an embedding.
+2. Compare it with stored document embeddings.
+3. Return the most similar chunks.
+
+Common similarity measures:
+- Cosine similarity
+- Dot product
+- Euclidean distance
+
+10. Retrieval
+The retriever selects relevant information for the LLM.
+
+Common approaches:
+- Dense vector search
+- Keyword/BM25 search
+- Hybrid search (keyword + vector)
+- Metadata filtering
+- Multi-query retrieval
+- Parent-document retrieval
+
+Top-k retrieval means selecting the best k candidate chunks.
+
+11. Reranking
+A reranker evaluates retrieved candidates more carefully and reorders them based on relevance.
+
+A common pipeline is:
+Vector Search -> Top-N Candidates -> Reranker -> Top-K Context
+
+Reranking can improve answer quality when initial vector retrieval returns noisy results.
+
+12. Prompting in RAG
+A RAG prompt should clearly separate the user's question from retrieved context.
+
+Example instruction:
+"Answer the question using only the provided context. If the answer is not present in the context, say that you do not have enough information."
+
+Useful prompt elements:
+- System instructions
+- Retrieved context
+- User question
+- Output format
+- Rules for handling missing information
+
+13. Hallucinations
+A hallucination occurs when an LLM generates information that is unsupported or incorrect.
+
+Ways to reduce hallucination:
+- Improve retrieval quality.
+- Use good chunking.
+- Add source metadata.
+- Instruct the model to use only retrieved context.
+- Require citations.
+- Use reranking.
+- Evaluate answers against a trusted dataset.
+
+RAG reduces hallucinations but does NOT guarantee that they will disappear.
+
+14. Context Window
+The context window is the amount of input/output information an LLM can process in one request.
+
+Sending too many retrieved chunks can:
+- Increase cost and latency.
+- Add irrelevant information.
+- Reduce answer quality.
+
+Retrieve and pass only the most useful context.
+
+15. RAG vs Fine-Tuning
+RAG:
+- Best for changing or private knowledge.
+- Knowledge stays in an external source.
+- Easier to update documents.
+- Can provide source citations.
+
+Fine-tuning:
+- Changes model behavior/weights.
+- Useful for style, format, domain behavior, or specialized task patterns.
+- Not usually the best method for frequently changing factual knowledge.
+
+RAG and fine-tuning can also be used together.
+
+16. Basic RAG Pseudocode
+
+documents = load_documents()
+chunks = split_into_chunks(documents)
+vectors = embed(chunks)
+vector_db.store(chunks, vectors)
+
+question = user_input()
+query_vector = embed(question)
+results = vector_db.similarity_search(query_vector, top_k=5)
+
+prompt = build_prompt(question, results)
+answer = llm.generate(prompt)
+
+return answer
+
+17. Advanced RAG
+Advanced techniques include:
+- Hybrid retrieval
+- Query rewriting
+- Multi-query retrieval
+- Hypothetical document embeddings (HyDE)
+- Reranking
+- Metadata-aware retrieval
+- Parent-child document retrieval
+- Context compression
+- Query routing
+- Graph-based retrieval
+- Agentic RAG
+
+18. Query Rewriting
+The original user question can be rewritten into a better search query.
+
+Example:
+User: "What about its pricing?"
+Rewritten query:
+"What is the pricing of Product X?"
+
+This is especially useful when the question depends on conversation history.
+
+19. Hybrid Search
+Hybrid search combines:
+- Semantic/vector search for meaning.
+- Keyword search for exact terms.
+
+This is useful for technical documents, product names, IDs, error codes, and other exact-match information.
+
+20. Citations and Sources
+A production RAG system should ideally show where an answer came from.
+
+Useful citation metadata:
+- document title
+- page
+- section
+- URL
+- chunk ID
+
+This improves trust and makes answers easier to verify.
+
+21. RAG Evaluation
+Evaluate both retrieval and generation.
+
+Retrieval metrics:
+- Recall@k
+- Precision@k
+- MRR (Mean Reciprocal Rank)
+- NDCG
+
+Generation/answer metrics:
+- Faithfulness
+- Answer relevance
+- Context relevance
+- Correctness
+
+Also test:
+- No-answer questions
+- Ambiguous questions
+- Multi-step questions
+- Questions requiring multiple documents
+
+22. Common RAG Problems
+Problem: Wrong chunks retrieved
+Solutions:
+- Better embeddings
+- Better chunking
+- Hybrid search
+- Metadata filters
+- Reranking
+
+Problem: Correct chunks retrieved but bad answer
+Solutions:
+- Improve prompt
+- Reduce irrelevant context
+- Use a stronger LLM
+- Require grounded answers
+
+Problem: Slow response
+Solutions:
+- Cache embeddings/results
+- Optimize vector search
+- Reduce retrieved context
+- Use a faster model
+- Stream generation
+
+23. Security
+For private/company RAG systems:
+- Apply document-level access control.
+- Filter retrieval by user permissions.
+- Avoid exposing sensitive metadata.
+- Protect vector databases and API keys.
+- Treat retrieved documents as untrusted input.
+- Defend against prompt injection in source documents.
+
+24. Recommended Project Structure
+
+rag-project/
+    data/
+    ingestion/
+        loaders/
+        chunking/
+        embeddings/
+    retrieval/
+        vector_store/
+        retriever/
+        reranker/
+    prompts/
+    generation/
+    evaluation/
+    api/
+    tests/
+    config/
+    main.py
+
+25. Practical RAG Checklist
+[ ] Define the knowledge sources.
+[ ] Build document ingestion.
+[ ] Choose a chunking strategy.
+[ ] Choose an embedding model.
+[ ] Choose a vector database.
+[ ] Implement retrieval.
+[ ] Add metadata filtering.
+[ ] Add reranking if needed.
+[ ] Create a grounded prompt.
+[ ] Return citations/sources.
+[ ] Evaluate retrieval separately from generation.
+[ ] Test hallucination and no-answer cases.
+[ ] Add authentication and access control.
+[ ] Monitor latency, cost, and answer quality.
+
+26. Key Interview Points
+- RAG = Retrieve + Augment + Generate.
+- Embeddings represent semantic meaning as vectors.
+- Vector search finds semantically similar chunks.
+- Chunking directly affects retrieval quality.
+- Top-k controls how many candidates are retrieved.
+- Reranking improves candidate ordering.
+- Hybrid search combines lexical and semantic retrieval.
+- RAG is generally easier to update than fine-tuning for factual knowledge.
+- Good RAG requires evaluation of both retrieval and generation.
+- RAG reduces hallucinations but cannot guarantee zero hallucinations.
