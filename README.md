@@ -38,3 +38,9 @@ Upload a text-based PDF and ask a question. Document text and retrieved passages
 ## Limitations and evaluation
 
 Answers may be inaccurate; the current UI does not provide explicit page citations. Scanned PDFs may require OCR. Evaluate answer correctness, retrieval recall, unsupported-question abstention and latency with a labeled question set. No benchmark results are claimed yet.
+
+## Repository overview
+
+PDF question answering with LangChain, FAISS, Hugging Face embeddings and Mistral.
+
+**Suggested GitHub topics:** `rag` `retrieval-augmented-generation` `langchain` `faiss` `huggingface` `mistral-ai` `streamlit`.
