@@ -1,6 +1,7 @@
 import streamlit as st
 import os
 import tempfile
+import hashlib
 from dotenv import load_dotenv
 
 from langchain_text_splitters import RecursiveCharacterTextSplitter
@@ -69,17 +70,26 @@ def process_pdf(file_path):
 
 # --- Application Flow ---
 
-if uploaded_file:
+if uploaded_file and st.session_state.get('pdf_hash') != hashlib.sha256(uploaded_file.getvalue()).hexdigest():
     with st.spinner("Processing PDF..."):
         with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as tmp:
             tmp.write(uploaded_file.read())
             tmp_path = tmp.name
 
-        st.session_state.vectorstore = process_pdf(tmp_path)
-        os.remove(tmp_path)
+        try:
+            st.session_state.vectorstore = process_pdf(tmp_path)
+            st.session_state.pdf_hash = hashlib.sha256(uploaded_file.getvalue()).hexdigest()
+            st.session_state.messages = []
+        finally:
+            os.remove(tmp_path)
         st.success("PDF processed and indexed!")
 
 # Chat Interface
+if uploaded_file is None:
+    st.session_state.vectorstore = None
+    st.session_state.pdf_hash = None
+    st.session_state.messages = []
+
 if st.session_state.vectorstore:
     st.header("Chat with your PDF")
 
