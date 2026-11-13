@@ -15,4 +15,5 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-      - run: python -m py_compile app.py main.py create_database.py
+      - run: python -m py_compile app.py main.py create_database.py pdf_utils.py
+      - run: python -m unittest -v test_pdf_utils
