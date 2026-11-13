@@ -1,7 +1,7 @@
 import streamlit as st
 import os
 import tempfile
-import hashlib
+from pdf_utils import clean_text, pdf_fingerprint
 from dotenv import load_dotenv
 
 from langchain_text_splitters import RecursiveCharacterTextSplitter
@@ -47,11 +47,6 @@ if "messages" not in st.session_state:
 
 # --- Logic Functions ---
 
-def clean_text(text):
-    text = text.encode("utf-8", "ignore").decode("utf-8")
-    text = " ".join(text.split())
-    return text
-
 def process_pdf(file_path):
     loader = PyPDFLoader(file_path)
     docs = loader.load()
@@ -70,15 +65,15 @@ def process_pdf(file_path):
 
 # --- Application Flow ---
 
-if uploaded_file and st.session_state.get('pdf_hash') != hashlib.sha256(uploaded_file.getvalue()).hexdigest():
+if uploaded_file and st.session_state.get('pdf_hash') != pdf_fingerprint(uploaded_file.getvalue()):
     with st.spinner("Processing PDF..."):
         with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as tmp:
-            tmp.write(uploaded_file.read())
+            tmp.write(uploaded_file.getvalue())
             tmp_path = tmp.name
 
         try:
             st.session_state.vectorstore = process_pdf(tmp_path)
-            st.session_state.pdf_hash = hashlib.sha256(uploaded_file.getvalue()).hexdigest()
+            st.session_state.pdf_hash = pdf_fingerprint(uploaded_file.getvalue())
             st.session_state.messages = []
         finally:
             os.remove(tmp_path)
